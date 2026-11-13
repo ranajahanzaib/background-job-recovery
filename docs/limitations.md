@@ -1,0 +1,5 @@
+# Limitations
+
+Exactly-once execution is not generally guaranteed. External side effects require provider idempotency or their own outbox and idempotent consumer. Recovery is eventual and depends on PostgreSQL, JetStream, the publisher, and the scheduler becoming available. A single-node Docker environment does not demonstrate infrastructure high availability. Long-running handlers renew leases and JetStream acknowledgments; if heartbeats cannot reach the database or broker, the handler context is canceled. Non-cancellable external operations still require downstream idempotency. Retry timing and attempt budgets need workload-specific tuning.
+
+The metrics endpoint exposes persisted counters and gauges; it does not provide latency histograms. The dashboard is a local demonstration interface. The integration suite covers core database and broker invariants, but does not cover the full outage, failure-injection, and acceptance matrix. The project is a reliability reference implementation and requires additional security, operational, and workload-specific review before production use.

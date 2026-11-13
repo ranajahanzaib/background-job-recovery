@@ -1,0 +1,5 @@
+# Runbook
+
+Start with `GET /api/stats`, then inspect PostgreSQL `jobs`, `job_attempts`, `job_outbox`, and `job_events`. For stuck `RUNNING` work, compare `lease_expires_at` with database time and inspect the matching attempt. Pending or expired publisher leases can be reclaimed by the publisher loop. NATS delivery issues should be correlated with outbox publish attempts and consumer state.
+
+Worker heartbeats renew the lease while also extending the JetStream acknowledgment window. On SIGTERM workers stop fetching, allow active jobs the configured shutdown grace, then cancel remaining handlers so leases can recover. Inspect a job with `GET /api/jobs/{id}`, its attempts with `GET /api/jobs/{id}/attempts`, and its event timeline with `GET /api/jobs/{id}/events`. Redrive only a dead job with `POST /api/jobs/{id}/redrive` and an authenticated admin token when configured. After an outage, verify actual successful job rows and unique fulfillment rows directly; status counts alone do not prove business integrity.
