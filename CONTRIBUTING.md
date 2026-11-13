@@ -1,46 +1,23 @@
-## Contributing
+# Contributing
 
-We welcome contributions of all kinds to improve this project! Here's how you can get involved:
+## Development setup
 
-1. **Fork the Repository**: Start by forking the repository to your GitHub account.
+Fork [the repository](https://github.com/ranajahanzaib/background-job-recovery), clone your fork, and create a topic branch:
 
-2. **Clone Your Fork**: Clone the forked repository to your local machine:
+```sh
+git clone https://github.com/YOUR_USERNAME/background-job-recovery.git
+cd background-job-recovery
+cp .env.example .env
+```
 
-   ```bash
-   git clone <repo_url>
-   cd repo_dir
-   ```
+Replace the credential placeholders in `.env` with locally generated values before starting Compose. See the [README](README.md#local-setup) for the credential setup and development commands.
 
-3. **Create a Branch**: Create a new branch for your feature or bug fix:
+## Changes
 
-   ```bash
-   git checkout -b feature-name
-   ```
+- Keep changes focused and follow the existing Go formatting and SQL conventions.
+- Add or update tests for behavior changes. Database or JetStream behavior should use the real services in the integration suite.
+- Run `make test`, `make test-race`, `make lint`, and `make build` for Go changes. Run `make test-integration` for changes that affect PostgreSQL or NATS behavior.
+- Update the relevant documentation when a change affects behavior, configuration, operations, or reliability claims.
+- Do not include credentials, tokens, private data, or generated build artifacts in a contribution.
 
-4. **Make Changes**: Make your changes to the codebase. Be sure to follow existing code style and conventions.
-
-5. **Commit Changes**: Commit your changes with a clear and descriptive message:
-
-   ```bash
-   git commit -m "Add detailed description of the changes"
-   ```
-
-6. **Push Changes**: Push your changes to your fork:
-
-   ```bash
-   git push origin feature-name
-   ```
-
-7. **Submit a Pull Request**: Open a pull request from your branch to the main repository's branch. Include a detailed description of your changes and the problem they solve.
-
-8. **Review and Feedback**: Participate in the review process. Make any requested changes, and your contribution will be merged!
-
-### Guidelines
-
-- Ensure your code follows the existing style and conventions.
-- Include tests for any new functionality or bug fixes.
-- Write clear, concise commit messages and pull request descriptions.
-
-### Issues
-
-Feel free to report bugs or suggest enhancements by creating an issue. Be sure to include detailed information about the problem and, if possible, steps to reproduce it.
+Open an issue for bugs or feature proposals. Pull requests should describe the problem, the behavior changed, and the validation performed.
