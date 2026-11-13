@@ -44,6 +44,8 @@ test-timings.json
 # Misc
 .DS_Store
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
@@ -72,3 +74,8 @@ yarn-error.log*
 
 # Python
 venv
+
+# Go build and test outputs
+/job-recovery
+/coverage.out
+/PLAN.md
