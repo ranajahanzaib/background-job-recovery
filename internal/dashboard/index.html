@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Background Job Recovery</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font: 16px system-ui;
+      background: #0b1220;
+      color: #e6edf7
+    }
+
+    body {
+      max-width: 1000px;
+      margin: 3rem auto;
+      padding: 0 1rem
+    }
+
+    h1 {
+      font-size: 2rem
+    }
+
+    .panel {
+      background: #131e30;
+      border: 1px solid #263650;
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 1rem 0
+    }
+
+    button,
+    input {
+      font: inherit;
+      padding: .6rem;
+      border-radius: 6px;
+      border: 1px solid #456;
+      background: #192943;
+      color: #fff
+    }
+
+    button {
+      cursor: pointer;
+      background: #147d72
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed
+    }
+
+    td,
+    th {
+      text-align: left;
+      padding: .5rem;
+      border-bottom: 1px solid #263650;
+      overflow-wrap: anywhere
+    }
+
+    pre {
+      white-space: pre-wrap
+    }
+
+  </style>
+  <h1>Background Job Recovery</h1>
+  <p>PostgreSQL job state, JetStream dispatch, and crash recovery status.</p>
+  <section class="panel">
+    <h2>Current state</h2>
+    <pre id="stats">Loading…</pre><button onclick="refresh()">Refresh</button>
+  </section>
+  <section class="panel">
+    <h2>Demo workload</h2><label>Admin token <input id="token" type="password"
+        placeholder="Required for mutations"></label> <button onclick="seed()">Seed 100 jobs</button>
+    <p id="run"></p><input id="runid" placeholder="Demo run UUID"><button onclick="verify()">Verify run</button>
+    <pre id="result"></pre>
+  </section>
+  <section class="panel">
+    <h2>Recent jobs</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Job</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Attempts</th>
+        </tr>
+      </thead>
+      <tbody id="jobs"></tbody>
+    </table>
+  </section>
+  <script>
+    async function refresh() { let s = await fetch('/api/stats'); document.querySelector('#stats').textContent = JSON.stringify(await s.json(), null, 2); let j = await (await fetch('/api/jobs?limit=50')).json(); document.querySelector('#jobs').replaceChildren(...j.map(x => { let tr = document.createElement('tr'); for (let value of [x.id, x.job_type, x.status, x.attempts_started + '/' + x.max_attempts]) { let td = document.createElement('td'); td.textContent = value; tr.append(td) } return tr })) }
+    async function seed() { let headers = { 'Content-Type': 'application/json' }; let token = document.querySelector('#token').value; if (token) headers.Authorization = 'Bearer ' + token; let r = await fetch('/api/demo/seed', { method: 'POST', headers, body: JSON.stringify({ count: 100 }) }); let d = await r.json(); document.querySelector('#run').textContent = 'Run: ' + (d.run_id || JSON.stringify(d)); document.querySelector('#runid').value = d.run_id || ''; refresh() }
+    async function verify() { let id = document.querySelector('#runid').value; let r = await fetch('/api/demo/verify?run_id=' + encodeURIComponent(id)); document.querySelector('#result').textContent = JSON.stringify(await r.json(), null, 2) } refresh(); setInterval(refresh, 5000)
+  </script>
+
+</html>
