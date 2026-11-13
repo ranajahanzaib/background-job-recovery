@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version: "1.27.x", cache: true }
       - run: docker compose up -d --wait postgres nats
-      - run: docker compose ps --wait postgres nats
+      - run: docker compose ps postgres nats
       - run: test -z "$(gofmt -l cmd internal migrations)"
       - run: go vet ./...
       - run: go test ./...
