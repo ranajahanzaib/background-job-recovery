@@ -334,7 +334,7 @@ func (s *System) Publish(ctx context.Context) error {
 			markTx.Rollback()
 			return markErr
 		}
-		if _, markErr = markTx.ExecContext(ctx, `INSERT INTO job_events(job_id,event_type,generation,metadata) VALUES($1,'JOB_DISPATCHED',$2,jsonb_build_object('event_id',$3))`, sent.JobID, sent.Generation, sent.EventID); markErr != nil {
+		if _, markErr = markTx.ExecContext(ctx, `INSERT INTO job_events(job_id,event_type,generation,metadata) VALUES($1,'JOB_DISPATCHED',$2,jsonb_build_object('event_id',$3::text))`, sent.JobID, sent.Generation, sent.EventID); markErr != nil {
 			markTx.Rollback()
 			return markErr
 		}
@@ -690,7 +690,7 @@ func (s *System) fail(ctx context.Context, j Job, attempt string, fence int64, w
 		if _, e = tx.ExecContext(ctx, `UPDATE job_attempts SET outcome='FENCED_OUT',finished_at=now(),error_code='FENCED_OUT',error_message='attempt no longer owns the active lease' WHERE id=$1 AND outcome='RUNNING'`, attempt); e != nil {
 			return e
 		}
-		if _, e = tx.ExecContext(ctx, `INSERT INTO job_events(job_id,event_type,worker_id,generation,fence_epoch,metadata) VALUES($1,'JOB_FENCED_OUT',$2,$3,$4,jsonb_build_object('attempt_id',$5))`, j.ID, s.C.WorkerID, j.Generation, fence, attempt); e != nil {
+		if _, e = tx.ExecContext(ctx, `INSERT INTO job_events(job_id,event_type,worker_id,generation,fence_epoch,metadata) VALUES($1,'JOB_FENCED_OUT',$2,$3,$4,jsonb_build_object('attempt_id',$5::text))`, j.ID, s.C.WorkerID, j.Generation, fence, attempt); e != nil {
 			return e
 		}
 		return tx.Commit()
@@ -724,7 +724,7 @@ func (s *System) fail(ctx context.Context, j Job, attempt string, fence int64, w
 	if status == "DEAD" {
 		event = "JOB_DEAD"
 	}
-	if _, e = tx.ExecContext(ctx, `INSERT INTO job_events(job_id,event_type,worker_id,generation,fence_epoch,metadata) VALUES($1,$2,$3,$4,$5,jsonb_build_object('error',$6))`, j.ID, event, s.C.WorkerID, j.Generation, fence, why.Error()); e != nil {
+	if _, e = tx.ExecContext(ctx, `INSERT INTO job_events(job_id,event_type,worker_id,generation,fence_epoch,metadata) VALUES($1,$2,$3,$4,$5,jsonb_build_object('error',$6::text))`, j.ID, event, s.C.WorkerID, j.Generation, fence, why.Error()); e != nil {
 		return e
 	}
 	return tx.Commit()

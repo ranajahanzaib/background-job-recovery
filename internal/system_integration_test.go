@@ -47,6 +47,7 @@ func integrationSystem(t *testing.T) *System {
 		s.Close()
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { s.Close() })
 	return s
 }
 
@@ -63,7 +64,6 @@ func cleanupJob(t *testing.T, s *System, jobID, orderID string) {
 
 func TestIntegrationIdempotentEnqueuePublishAndConcurrentDuplicateDispatch(t *testing.T) {
 	s := integrationSystem(t)
-	defer s.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	orderID, key := uuid.NewString(), "integration-"+uuid.NewString()
@@ -136,7 +136,6 @@ func TestIntegrationIdempotentEnqueuePublishAndConcurrentDuplicateDispatch(t *te
 
 func TestIntegrationStaleFenceCannotCommitFulfillment(t *testing.T) {
 	s := integrationSystem(t)
-	defer s.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	orderID, key := uuid.NewString(), "stale-"+uuid.NewString()
