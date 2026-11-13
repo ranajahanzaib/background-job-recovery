@@ -1,33 +1,28 @@
 name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
+on: [push, pull_request]
 jobs:
-  build:
+  go:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgres://job:${{ github.run_id }}@localhost:5432/job_recovery?sslmode=disable
+      COMPOSE_DATABASE_URL: postgres://job:${{ github.run_id }}@postgres:5432/job_recovery?sslmode=disable
+      POSTGRES_USER: job
+      POSTGRES_PASSWORD: ${{ github.run_id }}
+      POSTGRES_DB: job_recovery
+      ADMIN_TOKEN: ${{ github.run_id }}-ci
+      NATS_URL: nats://localhost:4222
+      REQUIRE_INTEGRATION: "1"
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      # Uncomment and adjust the steps below to match your project's setup
-
-      # - name: Install dependencies
-      #   run: npm ci
-
-      # - name: Lint
-      #   run: npm run lint
-
-      # - name: Run tests
-      #   run: npm test
-
-      # - name: Build
-      #   run: npm run build
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.27.x", cache: true }
+      - run: docker compose up -d --wait postgres nats
+      - run: docker compose ps --wait postgres nats
+      - run: test -z "$(gofmt -l cmd internal migrations)"
+      - run: go vet ./...
+      - run: go test ./...
+      - run: go test -race ./...
+      - run: go build ./cmd/job-recovery
+      - if: always()
+        run: docker compose down -v
