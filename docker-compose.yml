@@ -1,0 +1,101 @@
+services:
+  postgres:
+    restart: unless-stopped
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Copy .env.example to .env and set local values}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      {
+        test: ["CMD-SHELL", "pg_isready -U job -d job_recovery"],
+        interval: 3s,
+        timeout: 3s,
+        retries: 20,
+      }
+  nats:
+    restart: unless-stopped
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports: ["127.0.0.1:4222:4222", "127.0.0.1:8222:8222"]
+    volumes: [natsdata:/data]
+    healthcheck:
+      {
+        test:
+          ["CMD-SHELL", "wget -qO- http://127.0.0.1:8222/healthz >/dev/null"],
+        interval: 5s,
+        timeout: 3s,
+        retries: 10,
+      }
+  migrate:
+    build: .
+    command: ["migrate"]
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set COMPOSE_DATABASE_URL in .env}
+      NATS_URL: "nats://nats:4222"
+    depends_on: { postgres: { condition: service_healthy } }
+  api:
+    restart: unless-stopped
+    build: .
+    command: ["serve"]
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set COMPOSE_DATABASE_URL in .env}
+      NATS_URL: "nats://nats:4222"
+      HTTP_ADDR: ":8080"
+      DEMO_MODE_ENABLED: "true"
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?Set ADMIN_TOKEN in .env}
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+  publisher:
+    restart: unless-stopped
+    build: .
+    command: ["publisher"]
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set COMPOSE_DATABASE_URL in .env}
+      NATS_URL: "nats://nats:4222"
+    depends_on:
+      {
+        migrate: { condition: service_completed_successfully },
+        nats: { condition: service_healthy },
+      }
+  scheduler:
+    restart: unless-stopped
+    build: .
+    command: ["scheduler"]
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set COMPOSE_DATABASE_URL in .env}
+      NATS_URL: "nats://nats:4222"
+    depends_on: { migrate: { condition: service_completed_successfully } }
+  worker-a:
+    restart: unless-stopped
+    build: .
+    command: ["worker"]
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set COMPOSE_DATABASE_URL in .env}
+      NATS_URL: "nats://nats:4222"
+      WORKER_ID: worker-a
+      WORKER_CONCURRENCY: "4"
+      DEMO_MODE_ENABLED: "true"
+    depends_on:
+      {
+        migrate: { condition: service_completed_successfully },
+        nats: { condition: service_healthy },
+      }
+  worker-b:
+    restart: unless-stopped
+    build: .
+    command: ["worker"]
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:?Set COMPOSE_DATABASE_URL in .env}
+      NATS_URL: "nats://nats:4222"
+      WORKER_ID: worker-b
+      WORKER_CONCURRENCY: "4"
+      DEMO_MODE_ENABLED: "true"
+    depends_on:
+      {
+        migrate: { condition: service_completed_successfully },
+        nats: { condition: service_healthy },
+      }
+volumes: { pgdata: {}, natsdata: {} }
