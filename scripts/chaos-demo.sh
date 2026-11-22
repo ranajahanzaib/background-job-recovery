@@ -16,10 +16,16 @@ case "$run_id" in
   ????????-????-????-????-????????????) ;;
   *) echo "could not read demo run UUID" >&2; exit 1 ;;
 esac
+# psql does not expand variables in -c commands. Validate the UUID before
+# embedding it in these read-only queries instead.
+if ! printf '%s\n' "$run_id" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+  echo "demo run ID is not a UUID" >&2
+  exit 1
+fi
 # Wait until PostgreSQL proves worker-a holds a live execution lease.
 active=0
 for _ in $(seq 1 120); do
-  active=$($compose exec -T postgres psql -U job -d job_recovery -v run_id="$run_id" -Atc "SELECT count(*) FROM jobs WHERE demo_run_id=:'run_id'::uuid AND status='RUNNING' AND lease_owner='worker-a' AND lease_expires_at>now()")
+  active=$($compose exec -T postgres psql -U job -d job_recovery -Atc "SELECT count(*) FROM jobs WHERE demo_run_id='$run_id'::uuid AND status='RUNNING' AND lease_owner='worker-a' AND lease_expires_at>now()")
   [ "$active" -gt 0 ] && break
   sleep 0.25
 done
@@ -27,7 +33,7 @@ if [ "$active" -lt 1 ]; then echo "worker-a never acquired a live lease for run 
 # Compose's default kill signal is SIGKILL.
 $compose kill worker-a
 for _ in $(seq 1 90); do
-  counts=$($compose exec -T postgres psql -U job -d job_recovery -v run_id="$run_id" -Atc "SELECT d.expected_jobs,(SELECT count(*) FROM jobs j WHERE j.demo_run_id=d.id),(SELECT count(*) FROM jobs j WHERE j.demo_run_id=d.id AND j.status='SUCCEEDED'),(SELECT count(*) FROM jobs j JOIN order_fulfillments f ON f.job_id=j.id WHERE j.demo_run_id=d.id),(SELECT count(*) FROM (SELECT f.order_id FROM jobs j JOIN order_fulfillments f ON f.job_id=j.id WHERE j.demo_run_id=d.id GROUP BY f.order_id HAVING count(*)>1) q),(SELECT count(*) FROM job_events e JOIN jobs j ON j.id=e.job_id WHERE j.demo_run_id=d.id AND e.event_type='JOB_RECOVERED') FROM demo_runs d WHERE d.id=:'run_id'::uuid")
+  counts=$($compose exec -T postgres psql -U job -d job_recovery -Atc "SELECT d.expected_jobs,(SELECT count(*) FROM jobs j WHERE j.demo_run_id=d.id),(SELECT count(*) FROM jobs j WHERE j.demo_run_id=d.id AND j.status='SUCCEEDED'),(SELECT count(*) FROM jobs j JOIN order_fulfillments f ON f.job_id=j.id WHERE j.demo_run_id=d.id),(SELECT count(*) FROM (SELECT f.order_id FROM jobs j JOIN order_fulfillments f ON f.job_id=j.id WHERE j.demo_run_id=d.id GROUP BY f.order_id HAVING count(*)>1) q),(SELECT count(*) FROM job_events e JOIN jobs j ON j.id=e.job_id WHERE j.demo_run_id=d.id AND e.event_type='JOB_RECOVERED') FROM demo_runs d WHERE d.id='$run_id'::uuid")
   expected=$(printf '%s' "$counts" | cut -d '|' -f1)
   total=$(printf '%s' "$counts" | cut -d '|' -f2)
   succeeded=$(printf '%s' "$counts" | cut -d '|' -f3)

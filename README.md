@@ -2,6 +2,31 @@
 
 Background Job Recovery is a Go reference system for recovering interrupted jobs without duplicating committed PostgreSQL business actions. PostgreSQL owns job state and business effects; NATS JetStream provides durable at-least-once delivery.
 
+![Background Job Recovery dashboard showing completed fulfillment jobs](docs/screenshots/overview.png)
+
+The included order-fulfillment demo exercises the full recovery path: seed jobs, kill a worker while it owns active leases, allow another worker to recover them, then verify that each order was fulfilled exactly once.
+
+## Demonstration
+
+Start the local stack and run the crash-recovery workflow:
+
+```sh
+cp .env.example .env
+# Replace the password and token placeholders with random values.
+make up
+make chaos-demo
+```
+
+The dashboard is available at <http://127.0.0.1:8080/>. The chaos demo's verifier checks persisted job state, fulfillment records, duplicate effects, and recovery events. A successful run reports results like:
+
+```text
+verified run=<run-id> jobs=100 succeeded=100 fulfillments=100 duplicates=0 recovered=4
+```
+
+The dashboard screenshot above was captured from the running local stack. The CLI image shows the actual `verify` command output for the completed 100-job recovery run.
+
+![CLI verification of the recovered 100-job run](docs/screenshots/cli-demo.svg)
+
 ## Reliability model
 
 For the included order-fulfillment example, the fulfillment row and `SUCCEEDED` state commit in one PostgreSQL transaction. A unique order constraint prevents duplicate committed fulfillments, and finalization checks the current worker, generation, fencing epoch, and lease while holding the job row lock. A transactional outbox lets job submission commit independently of NATS availability.

@@ -602,7 +602,7 @@ func verifyDemo(ctx context.Context, s *internal.System, runID string) (map[stri
 	 (SELECT count(*) FROM job_attempts a JOIN run_jobs j ON j.id=a.job_id WHERE a.outcome='ABANDONED'),
 	 (SELECT count(*) FROM job_attempts a JOIN run_jobs j ON j.id=a.job_id WHERE a.outcome='FAILED_RETRYABLE'),
 	 (SELECT count(*) FROM job_events e JOIN run_jobs j ON j.id=e.job_id WHERE e.event_type='JOB_FENCED_OUT'),
-	 (SELECT error_message FROM run_jobs WHERE last_error_message IS NOT NULL ORDER BY updated_at DESC LIMIT 1)
+	 (SELECT last_error_message FROM run_jobs WHERE last_error_message IS NOT NULL ORDER BY updated_at DESC LIMIT 1)
 	FROM demo_runs d WHERE d.id=$1`
 	e := s.DB.QueryRowContext(ctx, q, runID).Scan(&expected, &orders, &total, &succeeded, &dead, &unfinished, &effects, &distinctOrders, &duplicates, &missing, &orphaned, &recovered, &abandoned, &retries, &fenced, &lastFailure)
 	if e != nil {
