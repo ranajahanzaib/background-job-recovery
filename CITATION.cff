@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use Background Job Recovery in research or teaching, please cite this software."
+title: "Background Job Recovery"
+version: 0.1.0
+authors:
+  - family-names: Rana
+    given-names: Jahanzaib
+    orcid: "https://orcid.org/0009-0006-7085-0440"
+repository-code: "https://github.com/ranajahanzaib/background-job-recovery"
+license: MIT
+abstract: "Background Job Recovery is a Go reference system for recovering interrupted jobs without duplicating committed PostgreSQL business actions. PostgreSQL owns job state and business effects, while NATS JetStream provides durable at-least-once delivery."
+keywords:
+  - background-jobs
+  - job-recovery
+  - golang
+  - postgresql
+  - nats-jetstream
